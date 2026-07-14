@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}PancreasAI — AI-Powered Pancreatic Cancer Detection{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<!-- ========== HERO SECTION ========== -->
+<section class="hero" id="hero">
+    <div class="hero-bg">
+        <div class="hero-particles" id="heroParticles"></div>
+        <div class="hero-gradient"></div>
+    </div>
+    <div class="hero-container">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-shield-alt"></i>
+                <span>Research-Grade AI Analysis</span>
+            </div>
+            <h1 class="hero-title">
+                AI-Powered<br>
+                <span class="hero-highlight">Pancreatic Cancer</span><br>
+                Detection
+            </h1>
+            <p class="hero-subtitle">
+                Advanced deep learning system for automated pancreas segmentation,
+                tumor detection, and clinical analysis — powered by PaNSegNet-inspired
+                architecture and PanTS benchmark protocols.
+            </p>
+            <div class="hero-actions">
+                <a href="#upload" class="btn btn-primary btn-lg">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload CT Scan
+                </a>
+                <a href="#features" class="btn btn-outline btn-lg">
+                    <i class="fas fa-info-circle"></i> Learn More
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="stat-number">98%+</span>
+                    <span class="stat-label">Accuracy</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">&lt;3s</span>
+                    <span class="stat-label">Inference</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">14+</span>
+                    <span class="stat-label">Metrics</span>
+                </div>
+                <div class="hero-stat-divider"></div>
+                <div class="hero-stat">
+                    <span class="stat-number">PDF</span>
+                    <span class="stat-label">Reports</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="hero-scan-display">
+                <div class="scan-frame">
+                    <div class="scan-header">
+                        <span class="scan-dot red"></span>
+                        <span class="scan-dot yellow"></span>
+                        <span class="scan-dot green"></span>
+                        <span class="scan-title">CT Scan Analysis</span>
+                    </div>
+                    <div class="scan-body">
+                        <div class="scan-grid">
+                            <div class="scan-cell">
+                                <div class="scan-placeholder">
+                                    <i class="fas fa-x-ray"></i>
+                                    <span>Original</span>
+                                </div>
+                            </div>
+                            <div class="scan-cell">
+                                <div class="scan-placeholder active">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>Segmentation</span>
+                                </div>
+                            </div>
+                            <div class="scan-cell">
+                                <div class="scan-placeholder">
+                                    <i class="fas fa-fire"></i>
+                                    <span>Heatmap</span>
+                                </div>
+                            </div>
+                            <div class="scan-cell">
+                                <div class="scan-placeholder">
+                                    <i class="fas fa-chart-pie"></i>
+                                    <span>Analysis</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scan-status">
+                            <div class="status-bar">
+                                <div class="status-fill"></div>
+                            </div>
+                            <span class="status-text">Ready for analysis</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== FEATURES SECTION ========== -->
+<section class="features-section" id="features">
+    <div class="section-container">
+        <div class="section-header">
+            <span class="section-badge">Capabilities</span>
+            <h2 class="section-title">Comprehensive AI Analysis</h2>
+            <p class="section-subtitle">Our pipeline delivers end-to-end pancreatic cancer analysis using state-of-the-art deep learning.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon blue">
+                    <i class="fas fa-draw-polygon"></i>
+                </div>
+                <h3>Pancreas Segmentation</h3>
+                <p>Precise organ segmentation using Attention UNet architecture inspired by PaNSegNet with transformer-based attention gates.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon red">
+                    <i class="fas fa-crosshairs"></i>
+                </div>
+                <h3>Tumor Detection</h3>
+                <p>Automated tumor localization with anatomical region classification — head, body, and tail of the pancreas.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <h3>Cancer Classification</h3>
+                <p>DenseNet121-based binary classification with cancer probability scoring and confidence assessment.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon purple">
+                    <i class="fas fa-fire-alt"></i>
+                </div>
+                <h3>Grad-CAM Heatmaps</h3>
+                <p>Visual explainability through Gradient-weighted Class Activation Maps showing model decision regions.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon orange">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h3>14+ Evaluation Metrics</h3>
+                <p>Comprehensive metrics including Dice, IoU, HD95, Precision, Recall, ASD — aligned with PanTS benchmarks.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon teal">
+                    <i class="fas fa-file-medical-alt"></i>
+                </div>
+                <h3>PDF Clinical Reports</h3>
+                <p>Hospital-style downloadable reports with predictions, visualizations, metrics, and clinical summary.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== PIPELINE SECTION ========== -->
+<section class="pipeline-section" id="pipeline">
+    <div class="section-container">
+        <div class="section-header">
+            <span class="section-badge">Workflow</span>
+            <h2 class="section-title">AI Inference Pipeline</h2>
+            <p class="section-subtitle">From image upload to clinical report in seconds.</p>
+        </div>
+        <div class="pipeline-track">
+            <div class="pipeline-line"></div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-upload"></i></div>
+                <div class="step-content">
+                    <h4>Upload</h4>
+                    <p>CT scan image</p>
+                </div>
+            </div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-shield-alt"></i></div>
+                <div class="step-content">
+                    <h4>Validate</h4>
+                    <p>Format & security</p>
+                </div>
+            </div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-sliders-h"></i></div>
+                <div class="step-content">
+                    <h4>Preprocess</h4>
+                    <p>CLAHE & normalize</p>
+                </div>
+            </div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-brain"></i></div>
+                <div class="step-content">
+                    <h4>AI Inference</h4>
+                    <p>Segmentation & classification</p>
+                </div>
+            </div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="step-content">
+                    <h4>Analyze</h4>
+                    <p>Metrics & heatmap</p>
+                </div>
+            </div>
+            <div class="pipeline-step">
+                <div class="step-icon"><i class="fas fa-file-pdf"></i></div>
+                <div class="step-content">
+                    <h4>Report</h4>
+                    <p>PDF generation</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== UPLOAD SECTION ========== -->
+<section class="upload-section" id="upload">
+    <div class="section-container">
+        <div class="section-header">
+            <span class="section-badge">Analyze</span>
+            <h2 class="section-title">Upload CT Scan</h2>
+            <p class="section-subtitle">Drag and drop your CT scan image for instant AI analysis.</p>
+        </div>
+        <div class="upload-area-wrapper">
+            <form action="/predict" method="POST" enctype="multipart/form-data" id="uploadForm">
+                <div class="upload-dropzone" id="dropzone">
+                    <div class="dropzone-content">
+                        <div class="dropzone-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3 class="dropzone-title">Drop your CT scan here</h3>
+                        <p class="dropzone-subtitle">or click to browse files</p>
+                        <div class="dropzone-formats">
+                            <span class="format-badge">PNG</span>
+                            <span class="format-badge">JPG</span>
+                            <span class="format-badge">JPEG</span>
+                            <span class="format-badge disabled" title="Coming soon">DICOM</span>
+                        </div>
+                        <p class="dropzone-limit">Maximum file size: 16 MB</p>
+                    </div>
+                    <input type="file" name="file" id="fileInput" accept=".png,.jpg,.jpeg" hidden>
+                </div>
+
+                <!-- File Preview -->
+                <div class="file-preview" id="filePreview" style="display: none;">
+                    <div class="preview-card">
+                        <img id="previewImage" src="" alt="Preview">
+                        <div class="preview-info">
+                            <span class="preview-name" id="previewName"></span>
+                            <span class="preview-size" id="previewSize"></span>
+                        </div>
+                        <button type="button" class="preview-remove" id="removeFile">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-lg upload-btn" id="uploadBtn" disabled>
+                    <i class="fas fa-microscope"></i> Run AI Analysis
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- ========== DISCLAIMER BANNER ========== -->
+<section class="disclaimer-banner">
+    <div class="section-container">
+        <div class="disclaimer-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Important Notice:</strong> This AI system is designed for research and educational purposes only.
+                It should NOT be used as a substitute for professional medical diagnosis. Always consult a qualified
+                healthcare provider for medical decisions.
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

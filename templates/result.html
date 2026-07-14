@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}PancreasAI — Analysis Results{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+    // Pass results data to charts.js
+    window.analysisResults = {{ results | tojson }};
+</script>
+{% endblock %}
+
+{% block content %}
+<!-- ========== RESULTS HEADER ========== -->
+<section class="results-header">
+    <div class="results-header-container">
+        <div class="results-breadcrumb">
+            <a href="/"><i class="fas fa-home"></i> Home</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Analysis Results</span>
+        </div>
+        <div class="results-title-row">
+            <div>
+                <h1 class="results-title">
+                    <i class="fas fa-chart-medical"></i> Analysis Results
+                </h1>
+                <p class="results-subtitle">
+                    Analysis ID: <code>{{ results.file_id[:12] }}</code>
+                    {% if results.demo_mode %}
+                    <span class="demo-badge"><i class="fas fa-flask"></i> Demo Mode</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="results-actions">
+                <a href="/download/{{ results.file_id }}" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download Report
+                </a>
+                <a href="/" class="btn btn-outline">
+                    <i class="fas fa-redo"></i> New Analysis
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== PREDICTION BANNER ========== -->
+{% if results.is_valid == False %}
+<section class="prediction-banner low-confidence" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%); border-left: 5px solid var(--warning); padding: 1.5rem;">
+    <div class="prediction-container">
+        <div class="prediction-main">
+            <div class="prediction-icon" style="color: var(--warning);">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="prediction-text">
+                <span class="prediction-label" style="color: var(--warning);">Safety Validation Status</span>
+                <span class="prediction-value" style="font-size: 1.25rem;">Low confidence prediction</span>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; opacity: 0.8;">{{ results.validation_msg }}</p>
+            </div>
+        </div>
+        <div class="prediction-metrics">
+            <div class="pred-metric">
+                <span class="pred-metric-value" style="color: var(--warning);">Reject</span>
+                <span class="pred-metric-label">Status</span>
+            </div>
+            <div class="pred-metric">
+                <span class="pred-metric-value">{{ results.confidence }}%</span>
+                <span class="pred-metric-label">Confidence</span>
+            </div>
+            <div class="pred-metric">
+                <span class="pred-metric-value risk-low">Low</span>
+                <span class="pred-metric-label">Risk Level</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% else %}
+<section class="prediction-banner {{ 'cancer' if results.prediction_label == 'Cancer' else 'normal' }}">
+    <div class="prediction-container">
+        <div class="prediction-main">
+            <div class="prediction-icon">
+                {% if results.prediction_label == 'Cancer' %}
+                <i class="fas fa-exclamation-triangle"></i>
+                {% else %}
+                <i class="fas fa-check-circle"></i>
+                {% endif %}
+            </div>
+            <div class="prediction-text">
+                <span class="prediction-label">AI Prediction</span>
+                <span class="prediction-value">{{ results.prediction }}</span>
+            </div>
+        </div>
+        <div class="prediction-metrics">
+            <div class="pred-metric">
+                <span class="pred-metric-value">{{ results.cancer_probability }}%</span>
+                <span class="pred-metric-label">Cancer Probability</span>
+            </div>
+            <div class="pred-metric">
+                <span class="pred-metric-value">{{ results.confidence }}%</span>
+                <span class="pred-metric-label">Confidence</span>
+            </div>
+            <div class="pred-metric">
+                <span class="pred-metric-value risk-{{ results.risk_level|lower|replace(' ', '-') }}">{{ results.risk_level }}</span>
+                <span class="pred-metric-label">Risk Level</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- ========== DASHBOARD GRID ========== -->
+<section class="dashboard-section">
+    <div class="dashboard-container">
+
+        <!-- ---- Image Comparison Grid ---- -->
+        <div class="dashboard-block full-width">
+            <div class="block-header">
+                <h2><i class="fas fa-images"></i> Image Analysis Pipeline</h2>
+            </div>
+            <div class="image-grid">
+                <div class="image-card">
+                    <div class="image-label">Original</div>
+                    <img src="{{ url_for('static', filename=results.original_image.replace('static/', '')) }}" alt="Original CT Scan">
+                </div>
+                <div class="image-card">
+                    <div class="image-label">Preprocessed</div>
+                    <img src="{{ url_for('static', filename=results.preprocessed_image.replace('static/', '')) }}" alt="Preprocessed">
+                </div>
+                <div class="image-card">
+                    <div class="image-label">Pancreas Mask</div>
+                    <img src="{{ url_for('static', filename=results.pancreas_mask.replace('static/', '')) }}" alt="Pancreas Segmentation">
+                </div>
+                <div class="image-card">
+                    <div class="image-label">Tumor Mask</div>
+                    <img src="{{ url_for('static', filename=results.tumor_mask.replace('static/', '')) }}" alt="Tumor Segmentation">
+                </div>
+                <div class="image-card">
+                    <div class="image-label">Overlay</div>
+                    <img src="{{ url_for('static', filename=results.overlay.replace('static/', '')) }}" alt="Segmentation Overlay">
+                </div>
+                <div class="image-card">
+                    <div class="image-label">Heatmap</div>
+                    <img src="{{ url_for('static', filename=results.heatmap_overlay.replace('static/', '')) }}" alt="Grad-CAM Heatmap">
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- Metrics Cards Row ---- -->
+        <div class="dashboard-block full-width">
+            <div class="block-header">
+                <h2><i class="fas fa-tachometer-alt"></i> Key Metrics</h2>
+            </div>
+            <div class="metrics-card-grid">
+                <div class="metric-card accent">
+                    <div class="metric-icon"><i class="fas fa-diagnoses"></i></div>
+                    <div class="metric-value">{{ results.prediction_label }}</div>
+                    <div class="metric-label">Prediction</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-percentage"></i></div>
+                    <div class="metric-value">{{ results.confidence }}%</div>
+                    <div class="metric-label">Confidence</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-expand-arrows-alt"></i></div>
+                    <div class="metric-value">{{ results.tumor_area }} cm²</div>
+                    <div class="metric-label">Tumor Area</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-cube"></i></div>
+                    <div class="metric-value">{{ results.tumor_volume }} cc</div>
+                    <div class="metric-label">Tumor Volume</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-map-marker-alt"></i></div>
+                    <div class="metric-value small-text">{{ results.tumor_location }}</div>
+                    <div class="metric-label">Location</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="metric-value small-text">{{ results.stage_suggestion[:30] }}</div>
+                    <div class="metric-label">Stage</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                    <div class="metric-value">{{ results.inference_time }}s</div>
+                    <div class="metric-label">Inference Time</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-microchip"></i></div>
+                    <div class="metric-value small-text">{{ results.gpu_status }}</div>
+                    <div class="metric-label">GPU Status</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- Charts Row ---- -->
+        <div class="charts-row">
+            <!-- Probability Pie Chart -->
+            <div class="dashboard-block">
+                <div class="block-header">
+                    <h2><i class="fas fa-chart-pie"></i> Probability Distribution</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="probabilityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Confidence Gauge -->
+            <div class="dashboard-block">
+                <div class="block-header">
+                    <h2><i class="fas fa-gauge-high"></i> Confidence Gauge</h2>
+                </div>
+                <div class="gauge-container" id="gaugeContainer">
+                    <div class="gauge">
+                        <div class="gauge-fill" id="gaugeFill" style="--gauge-value: {{ results.confidence }}"></div>
+                        <div class="gauge-cover">
+                            <span class="gauge-value" id="gaugeValue">{{ results.confidence }}%</span>
+                            <span class="gauge-label">Confidence</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- Evaluation Metrics Table ---- -->
+        <div class="dashboard-block full-width">
+            <div class="block-header">
+                <h2><i class="fas fa-table"></i> Evaluation Metrics (PaNSegNet / PanTS Protocol)</h2>
+            </div>
+            <div class="metrics-table-wrapper">
+                <table class="metrics-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Score</th>
+                            <th>Visual</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in results.metrics.items() %}
+                        <tr>
+                            <td class="metric-name">
+                                {% if key == 'dice_score' %}Dice Coefficient (DSC)
+                                {% elif key == 'iou' %}Intersection over Union (IoU)
+                                {% elif key == 'hausdorff_95' %}Hausdorff Distance 95% (HD95)
+                                {% elif key == 'precision' %}Precision
+                                {% elif key == 'recall' %}Recall
+                                {% elif key == 'f1_score' %}F1 Score
+                                {% elif key == 'sensitivity' %}Sensitivity
+                                {% elif key == 'specificity' %}Specificity
+                                {% elif key == 'accuracy' %}Accuracy
+                                {% elif key == 'asd' %}Avg. Surface Distance (ASD)
+                                {% elif key == 'volume_similarity' %}Volume Similarity (VS)
+                                {% else %}{{ key }}{% endif %}
+                            </td>
+                            <td class="metric-score">{{ value }}</td>
+                            <td class="metric-bar-cell">
+                                {% if key != 'hausdorff_95' and key != 'asd' %}
+                                <div class="metric-bar">
+                                    <div class="metric-bar-fill" style="width: {{ (value * 100)|round }}%"></div>
+                                </div>
+                                {% else %}
+                                <span class="metric-distance">{{ value }} px</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ---- Charts Row 2: Metrics Bar Chart + Feature Importance ---- -->
+        <div class="charts-row">
+            <div class="dashboard-block">
+                <div class="block-header">
+                    <h2><i class="fas fa-chart-bar"></i> Metrics Overview</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="metricsChart"></canvas>
+                </div>
+            </div>
+            <div class="dashboard-block">
+                <div class="block-header">
+                    <h2><i class="fas fa-sort-amount-down"></i> Feature Importance</h2>
+                </div>
+                <div class="chart-container">
+                    <canvas id="featureChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- Clinical Summary ---- -->
+        <div class="dashboard-block full-width">
+            <div class="block-header">
+                <h2><i class="fas fa-notes-medical"></i> Clinical Summary</h2>
+            </div>
+            <div class="clinical-summary">
+                <div class="summary-content" id="clinicalSummary">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ---- Download & Actions ---- -->
+        <div class="dashboard-block full-width actions-block">
+            <div class="actions-row">
+                <a href="/download/{{ results.file_id }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-file-pdf"></i> Download Full Report (PDF)
+                </a>
+                <a href="/" class="btn btn-outline btn-lg">
+                    <i class="fas fa-plus-circle"></i> Analyze Another Scan
+                </a>
+            </div>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

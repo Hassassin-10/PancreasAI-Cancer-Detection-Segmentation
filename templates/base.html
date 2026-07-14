@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-Powered Pancreatic Cancer Detection and Segmentation System — Advanced deep learning for medical imaging analysis.">
+    <meta name="keywords" content="pancreatic cancer, AI detection, medical imaging, segmentation, deep learning">
+    <meta name="author" content="PancreasAI Research Lab">
+    <title>{% block title %}PancreasAI — Pancreatic Cancer Detection{% endblock %}</title>
+
+    <!-- Google Fonts — Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- ========== NAVIGATION ========== -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <div class="nav-logo">
+                    <i class="fas fa-dna"></i>
+                </div>
+                <div class="nav-brand-text">
+                    <span class="brand-name">PancreasAI</span>
+                    <span class="brand-tagline">Medical Imaging Intelligence</span>
+                </div>
+            </a>
+
+            <div class="nav-links" id="navLinks">
+                <a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="/#features" class="nav-link"><i class="fas fa-microscope"></i> Features</a>
+                <a href="/#pipeline" class="nav-link"><i class="fas fa-project-diagram"></i> Pipeline</a>
+                <a href="/#upload" class="nav-link"><i class="fas fa-cloud-upload-alt"></i> Analyze</a>
+            </div>
+
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon" id="themeIcon"></i>
+                </button>
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========== FLASH MESSAGES ========== -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash-message flash-{{ category }}">
+                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% elif category == 'success' %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
+                <span>{{ message }}</span>
+                <button class="flash-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <i class="fas fa-dna"></i>
+                        <span>PancreasAI</span>
+                    </div>
+                    <p class="footer-description">
+                        Advanced AI-powered pancreatic cancer detection and segmentation
+                        system for medical imaging analysis.
+                    </p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/#features">Features</a>
+                    <a href="/#upload">Analyze</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Resources</h4>
+                    <a href="https://github.com/NUBagciLab/PaNSegNet" target="_blank">PaNSegNet</a>
+                    <a href="https://github.com/MrGiovanni/PanTS" target="_blank">PanTS Dataset</a>
+                </div>
+            </div>
+
+            <div class="footer-disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Medical Disclaimer:</strong> This system is for research and educational purposes only.
+                It is NOT a certified medical device. All AI predictions must be validated by qualified healthcare professionals.
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 PancreasAI Research Lab. Built with Flask, PyTorch &amp; MONAI.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========== LOADING OVERLAY ========== -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <div class="spinner-ring"></div>
+                <i class="fas fa-dna spinner-icon"></i>
+            </div>
+            <h3 class="loading-title">Analyzing CT Scan</h3>
+            <p class="loading-subtitle">Running AI inference pipeline...</p>
+            <div class="loading-steps" id="loadingSteps">
+                <div class="loading-step active" data-step="1">
+                    <i class="fas fa-check-circle"></i> Preprocessing Image
+                </div>
+                <div class="loading-step" data-step="2">
+                    <i class="fas fa-circle-notch fa-spin"></i> Running Segmentation
+                </div>
+                <div class="loading-step" data-step="3">
+                    <i class="far fa-circle"></i> Classifying Tumor
+                </div>
+                <div class="loading-step" data-step="4">
+                    <i class="far fa-circle"></i> Generating Heatmap
+                </div>
+                <div class="loading-step" data-step="5">
+                    <i class="far fa-circle"></i> Computing Metrics
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCRIPTS ========== -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

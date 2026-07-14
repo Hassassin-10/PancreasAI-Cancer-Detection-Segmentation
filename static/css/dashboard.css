@@ -1,0 +1,606 @@
+/* ============================================================================
+   dashboard.css — Results Dashboard Styles
+   ============================================================================
+   Specific styles for the analysis results page: prediction banners,
+   metric cards, image grid, charts, tables, and gauges.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------------------
+   Results Header
+   --------------------------------------------------------------------------- */
+.results-header {
+    padding-top: calc(var(--nav-height) + 32px);
+    padding-bottom: 24px;
+    background: var(--bg-primary);
+}
+
+.results-header-container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.results-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+}
+
+.results-breadcrumb a {
+    color: var(--text-tertiary);
+    transition: color var(--transition-fast);
+}
+
+.results-breadcrumb a:hover {
+    color: var(--primary-600);
+}
+
+.results-breadcrumb i.fa-chevron-right {
+    font-size: 0.65rem;
+}
+
+.results-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.results-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.results-title i {
+    color: var(--primary-600);
+    margin-right: 8px;
+}
+
+.results-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.results-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #f59e0b;
+    margin-left: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Prediction Banner
+   --------------------------------------------------------------------------- */
+.prediction-banner {
+    padding: 28px 0;
+    border-top: 3px solid;
+}
+
+.prediction-banner.cancer {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06), rgba(239, 68, 68, 0.02));
+    border-color: #ef4444;
+}
+
+.prediction-banner.normal {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(16, 185, 129, 0.02));
+    border-color: #10b981;
+}
+
+.prediction-container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.prediction-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.prediction-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.cancer .prediction-icon {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.normal .prediction-icon {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.prediction-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.prediction-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+.cancer .prediction-value { color: #ef4444; }
+.normal .prediction-value { color: #10b981; }
+
+.prediction-metrics {
+    display: flex;
+    gap: 32px;
+}
+
+.pred-metric {
+    text-align: center;
+}
+
+.pred-metric-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.pred-metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+}
+
+.risk-low { color: #10b981 !important; }
+.risk-moderate { color: #f59e0b !important; }
+.risk-high { color: #f97316 !important; }
+.risk-very-high { color: #ef4444 !important; }
+
+/* ---------------------------------------------------------------------------
+   Dashboard Grid
+   --------------------------------------------------------------------------- */
+.dashboard-section {
+    padding: 32px 0 64px;
+    background: var(--bg-primary);
+}
+
+.dashboard-container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dashboard-block {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: box-shadow var(--transition-normal);
+}
+
+.dashboard-block:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.block-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-tertiary);
+}
+
+.block-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.block-header h2 i {
+    color: var(--primary-600);
+    margin-right: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Image Grid
+   --------------------------------------------------------------------------- */
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    padding: 24px;
+}
+
+.image-card {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    background: var(--bg-tertiary);
+}
+
+.image-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-normal);
+}
+
+.image-card:hover img {
+    transform: scale(1.03);
+}
+
+.image-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    z-index: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Metrics Card Grid
+   --------------------------------------------------------------------------- */
+.metrics-card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 24px;
+}
+
+.metric-card {
+    background: var(--bg-glass);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+    transition: all var(--transition-normal);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-300);
+}
+
+.metric-card.accent {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    color: white;
+    border: none;
+}
+
+.metric-card.accent .metric-icon,
+.metric-card.accent .metric-value,
+.metric-card.accent .metric-label {
+    color: white;
+}
+
+.metric-icon {
+    font-size: 1.25rem;
+    color: var(--primary-500);
+    margin-bottom: 10px;
+}
+
+.metric-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.metric-value.small-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.metric-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ---------------------------------------------------------------------------
+   Charts
+   --------------------------------------------------------------------------- */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.chart-container {
+    padding: 24px;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-container canvas {
+    max-height: 280px;
+}
+
+/* ---------------------------------------------------------------------------
+   Confidence Gauge
+   --------------------------------------------------------------------------- */
+.gauge-container {
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gauge {
+    position: relative;
+    width: 220px;
+    height: 110px;
+    overflow: hidden;
+}
+
+.gauge-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 200%;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0.75turn,
+        #ef4444 0%,
+        #f59e0b 25%,
+        #10b981 50%,
+        transparent 50%
+    );
+    transform-origin: center bottom;
+    mask: radial-gradient(circle at center bottom, transparent 55%, black 56%);
+    -webkit-mask: radial-gradient(circle at center bottom, transparent 55%, black 56%);
+}
+
+.gauge-cover {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    padding-bottom: 10px;
+}
+
+.gauge-value {
+    display: block;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--primary-600);
+    line-height: 1;
+}
+
+.gauge-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Metrics Table
+   --------------------------------------------------------------------------- */
+.metrics-table-wrapper {
+    padding: 0;
+    overflow-x: auto;
+}
+
+.metrics-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.metrics-table thead th {
+    padding: 14px 20px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    background: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-medium);
+}
+
+.metrics-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background var(--transition-fast);
+}
+
+.metrics-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.metrics-table td {
+    padding: 14px 20px;
+    font-size: 0.9rem;
+}
+
+.metric-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.metric-score {
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--primary-700);
+}
+
+[data-theme="dark"] .metric-score {
+    color: var(--primary-400);
+}
+
+.metric-bar-cell {
+    width: 200px;
+}
+
+.metric-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.metric-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
+    border-radius: var(--radius-full);
+    transition: width 1s ease;
+}
+
+.metric-distance {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+}
+
+/* ---------------------------------------------------------------------------
+   Clinical Summary
+   --------------------------------------------------------------------------- */
+.clinical-summary {
+    padding: 24px;
+}
+
+.summary-content {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    white-space: pre-line;
+}
+
+.summary-content .summary-heading {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin-top: 16px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.summary-content .summary-heading:first-child {
+    margin-top: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Actions Block
+   --------------------------------------------------------------------------- */
+.actions-block {
+    background: var(--bg-tertiary);
+}
+
+.actions-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px 24px;
+    flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive Dashboard
+   --------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+    .metrics-card-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+    .prediction-container {
+        flex-direction: column;
+        text-align: center;
+    }
+    .prediction-main {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 768px) {
+    .image-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .metrics-card-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .results-title-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .results-actions {
+        width: 100%;
+    }
+    .results-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+    .prediction-metrics {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .metrics-card-grid {
+        grid-template-columns: 1fr;
+    }
+    .image-grid {
+        grid-template-columns: 1fr;
+    }
+}
