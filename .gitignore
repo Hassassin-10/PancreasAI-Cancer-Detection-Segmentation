@@ -100,3 +100,10 @@ Thumbs.db
 
 #models
 models
+
+#build res
+static/heatmaps
+static/masks
+static/outputs
+static/reports
+static/uploads
