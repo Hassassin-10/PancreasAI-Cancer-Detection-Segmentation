@@ -76,11 +76,11 @@ CLAHE_TILE_SIZE = (8, 8)     # CLAHE tile grid size
 # Inference Parameters
 # ---------------------------------------------------------------------------
 BATCH_SIZE = 1               # Single image inference
-CONFIDENCE_THRESHOLD = 0.5   # Classification threshold
+CONFIDENCE_THRESHOLD = 0.30   # Classification threshold (relaxed for high clinical sensitivity)
 SEGMENTATION_THRESHOLD = 0.5 # Mask binarization threshold
 MIN_TUMOR_AREA_CM2 = 0.05    # Minimum tumor area to require before forcing Normal
 MIN_TUMOR_PIXELS = 50        # Minimum tumor pixel count to require before forcing Normal
-CONFIDENCE_OVERRIDE_THRESHOLD = 0.90  # Confidence threshold to override low-size tumor safety rule
+CONFIDENCE_OVERRIDE_THRESHOLD = 0.30  # Confidence threshold to override low-size tumor safety rule
 
 # ---------------------------------------------------------------------------
 # Pixel Spacing (default, should be overridden with DICOM metadata)

@@ -561,30 +561,55 @@ def run_full_inference(filepath, file_id):
 
         # --- Classification using Keras model ---
         if _keras_cls_model is not None:
-            # Prepare input for Keras classifier (299x299x3 RGB)
-            cls_input = cv2.resize(preprocessed, (config.KERAS_CLASSIFIER_INPUT_SIZE,
-                                                   config.KERAS_CLASSIFIER_INPUT_SIZE))
-            # Convert grayscale to 3-channel RGB
+            # Binarize and postprocess pancreas mask to crop the input
+            from utils.segmentation import create_segmentation_mask, postprocess_pancreas_mask
+            pancreas_raw = create_segmentation_mask(pancreas_prob)
+            pancreas_binary = postprocess_pancreas_mask(pancreas_raw)
+            
+            # Crop to pancreas bounding box if detected
+            pts = np.argwhere(pancreas_binary > 0)
+            if len(pts) > 0:
+                ymin, xmin = pts.min(axis=0)
+                ymax, xmax = pts.max(axis=0)
+                # Pad bounding box slightly for context
+                h, w = pancreas_binary.shape
+                ymin = max(0, ymin - 15)
+                ymax = min(h, ymax + 15)
+                xmin = max(0, xmin - 15)
+                xmax = min(w, xmax + 15)
+                
+                crop_gray = preprocessed[ymin:ymax, xmin:xmax]
+            else:
+                crop_gray = preprocessed
+                
+            # Resize and convert to 3-channel RGB
+            cls_input = cv2.resize(crop_gray, (config.KERAS_CLASSIFIER_INPUT_SIZE,
+                                               config.KERAS_CLASSIFIER_INPUT_SIZE))
             if len(cls_input.shape) == 2:
                 cls_input_rgb = np.stack([cls_input] * 3, axis=-1)
             else:
                 cls_input_rgb = cls_input
+                
+            # Normalize to [-1.0, 1.0] (expected by Xception)
+            cls_input_norm = (cls_input_rgb * 2.0) - 1.0
             
-            # Add batch dimension: (1, 299, 299, 3)
-            cls_batch = np.expand_dims(cls_input_rgb, axis=0).astype(np.float32)
+            # Add batch dimension
+            cls_batch = np.expand_dims(cls_input_norm, axis=0).astype(np.float32)
             
             # Run Keras prediction
             cls_output_np = _keras_cls_model.predict(cls_batch, verbose=0)
             cls_probs_np = cls_output_np[0]  # Shape: (2,) — [normal_prob, cancer_prob]
             
-            predicted_class = int(np.argmax(cls_probs_np))
-            labels = ["Normal", "Pancreatic Cancer"]
+            # Map prediction using the confidence threshold
+            cancer_prob = float(cls_probs_np[1])
+            is_cancer = cancer_prob >= config.CONFIDENCE_THRESHOLD
+            
             cls_results = {
-                "prediction": labels[predicted_class],
-                "prediction_label": "Cancer" if predicted_class == 1 else "Normal",
-                "cancer_probability": float(cls_probs_np[1]),
+                "prediction": "Pancreatic Cancer" if is_cancer else "Normal",
+                "prediction_label": "Cancer" if is_cancer else "Normal",
+                "cancer_probability": cancer_prob,
                 "normal_probability": float(cls_probs_np[0]),
-                "confidence": float(cls_probs_np.max()),
+                "confidence": cancer_prob if is_cancer else float(cls_probs_np[0]),
             }
         else:
             # Fallback: derive classification from segmentation tumor activation
@@ -654,8 +679,11 @@ def run_full_inference(filepath, file_id):
     is_valid = seg_results.get("is_valid", True)
     validation_msg = seg_results.get("validation_msg", "Valid")
     
-    # Check if classifier confidence is below 70%
-    has_high_confidence = raw_confidence >= 0.70
+    # Check if classifier confidence is above threshold
+    has_high_confidence = (
+        (cls_results["prediction_label"] == "Cancer" and cancer_probability >= config.CONFIDENCE_THRESHOLD) or
+        (cls_results["prediction_label"] == "Normal" and (1.0 - cancer_probability) >= 0.50)
+    )
 
     # Determine diagnosis using the rule-based safety hierarchy
     if not pancreas_detected:
