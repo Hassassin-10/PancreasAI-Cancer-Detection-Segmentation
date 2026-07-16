@@ -39,6 +39,10 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 SEGMENTATION_MODEL_PATH = os.path.join(MODEL_DIR, "pansegnet_model.pth")
 CLASSIFIER_MODEL_PATH = os.path.join(MODEL_DIR, "tumor_classifier.pth")
 
+# Keras classifier (user-trained Xception-based model)
+KERAS_CLASSIFIER_PATH = os.path.join(MODEL_DIR, "pancreas_tumor_ACC_98%.keras")
+KERAS_CLASSIFIER_INPUT_SIZE = 299  # Xception expected input
+
 # ---------------------------------------------------------------------------
 # Device Selection — GPU if available, else CPU
 # ---------------------------------------------------------------------------
@@ -109,5 +113,5 @@ DEBUG = os.environ.get("FLASK_DEBUG", "True").lower() == "true"
 # ---------------------------------------------------------------------------
 DEMO_MODE = not (
     os.path.exists(SEGMENTATION_MODEL_PATH) and
-    os.path.exists(CLASSIFIER_MODEL_PATH)
+    os.path.exists(KERAS_CLASSIFIER_PATH)
 )

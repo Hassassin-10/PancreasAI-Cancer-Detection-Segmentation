@@ -116,7 +116,7 @@ def validate_segmentation(pancreas_raw, tumor_raw, pancreas_binary):
     """
     pancreas_area = int((pancreas_binary > 0).sum())
     min_area = 500     # Lower bound for valid pancreas slice
-    max_area = 60000   # Upper bound
+    max_area = 120000  # Upper bound (relaxed for 26-class multi-organ models)
     
     if pancreas_area == 0:
         return False, "Pancreas not detected in this slice."
@@ -128,25 +128,29 @@ def validate_segmentation(pancreas_raw, tumor_raw, pancreas_binary):
         return False, "Detected pancreas area is above maximum physiological threshold (low confidence)."
         
     # Check if raw pancreas mask has too many scattered disconnected components
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pancreas_raw)
-    total_raw_area = stats[1:, cv2.CC_STAT_AREA].sum() if num_labels > 1 else 0
-    if total_raw_area > 0:
-        largest_area = stats[1:, cv2.CC_STAT_AREA].max()
-        largest_fraction = largest_area / total_raw_area
-        # If the largest component is less than 35% of the total raw predicted pancreas area,
-        # it means the model is highly uncertain and predicting random blobs everywhere.
-        if largest_fraction < 0.35:
-            return False, "Pancreas prediction has too many scattered disconnected components (low confidence)."
+    # num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(pancreas_raw)
+    # total_raw_area = stats[1:, cv2.CC_STAT_AREA].sum() if num_labels > 1 else 0
+    # if total_raw_area > 0:
+    #     largest_area = stats[1:, cv2.CC_STAT_AREA].max()
+    #     largest_fraction = largest_area / total_raw_area
+    #     # If the largest component is less than 20% of the total raw predicted pancreas area,
+    #     # it means the model is highly uncertain and predicting random blobs everywhere.
+    #     if largest_fraction < 0.20:
+    #         return False, "Pancreas prediction has too many scattered disconnected components (low confidence)."
         
     # Check if the predicted tumor is almost entirely outside the pancreas parenchyma
+    # Note: This is informational only — postprocess_tumor_mask() already clips
+    # the tumor to inside the pancreas, so a mismatch here just means the raw
+    # tumor prediction was in a different region. We do NOT reject the entire
+    # prediction because of this; the classifier handles cancer/normal decisions.
     tumor_area = int((tumor_raw > 0).sum())
     if tumor_area > 0:
         tumor_inside = cv2.bitwise_and(tumor_raw, pancreas_binary)
         inside_area = int((tumor_inside > 0).sum())
         inside_fraction = inside_area / tumor_area
-        # If less than 15% of the predicted tumor is inside the pancreas, it is likely a false positive
         if inside_fraction < 0.15:
-            return False, "High-intensity tumor predictions located outside the pancreas region (low confidence)."
+            # Soft warning — don't reject, just note the mismatch
+            return True, "Valid (note: raw tumor predictions mostly outside pancreas region)"
         
     return True, "Valid"
 

@@ -21,6 +21,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
+# TensorFlow/Keras for the trained classification model
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TF warnings
+try:
+    import tensorflow as tf
+    HAS_TENSORFLOW = True
+except ImportError:
+    HAS_TENSORFLOW = False
+    print("[!] TensorFlow not installed — Keras classifier unavailable")
+
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config
@@ -227,6 +236,7 @@ class TumorClassifier(nn.Module):
 # Global model references (loaded once at startup)
 _seg_model = None
 _cls_model = None
+_keras_cls_model = None  # Keras classification model
 
 
 def load_models():
@@ -241,7 +251,7 @@ def load_models():
     Returns:
         tuple: (segmentation_model, classifier_model)
     """
-    global _seg_model, _cls_model
+    global _seg_model, _cls_model, _keras_cls_model
 
     device = config.DEVICE
 
@@ -329,11 +339,37 @@ def load_models():
     return _seg_model, _cls_model
 
 
+def _load_keras_classifier():
+    """
+    Load the user-trained Keras classification model (.keras).
+    Called once at application startup.
+    """
+    global _keras_cls_model
+
+    if not HAS_TENSORFLOW:
+        print("[!] TensorFlow not available — skipping Keras classifier")
+        return
+
+    if os.path.exists(config.KERAS_CLASSIFIER_PATH):
+        try:
+            _keras_cls_model = tf.keras.models.load_model(config.KERAS_CLASSIFIER_PATH)
+            print(f"[OK] Loaded Keras classifier from {config.KERAS_CLASSIFIER_PATH}")
+            print(f"     Input shape: {_keras_cls_model.input_shape}")
+            print(f"     Output shape: {_keras_cls_model.output_shape}")
+        except Exception as e:
+            print(f"[!] Failed to load Keras classifier: {e}")
+            _keras_cls_model = None
+    else:
+        print(f"[!] Keras classifier not found at {config.KERAS_CLASSIFIER_PATH}")
+
+
 def get_models():
     """Get the loaded models, loading them if not already done."""
-    global _seg_model, _cls_model
+    global _seg_model, _cls_model, _keras_cls_model
     if _seg_model is None or _cls_model is None:
         load_models()
+    if _keras_cls_model is None and HAS_TENSORFLOW:
+        _load_keras_classifier()
     return _seg_model, _cls_model
 
 
@@ -523,71 +559,53 @@ def run_full_inference(filepath, file_id):
             pancreas_prob = np.zeros_like(seg_probs[0])
             tumor_prob = seg_probs[0]
 
-        # Prepare classification input
-        cls_input = cv2.resize(preprocessed, (config.CLASSIFIER_INPUT_SIZE,
-                                               config.CLASSIFIER_INPUT_SIZE))
-        cls_tensor = torch.from_numpy(cls_input).float().unsqueeze(0).unsqueeze(0)
-        
-        # Auto-detect classification model's expected input channels
-        first_conv = None
-        for m in cls_model.modules():
-            if isinstance(m, (nn.Conv2d, nn.Conv3d)):
-                first_conv = m
-                break
-        expected_channels = 3
-        if first_conv is not None:
-            expected_channels = first_conv.in_channels
-
-        # Format input channels
-        cls_tensor = cls_tensor.repeat(1, expected_channels, 1, 1)
-        cls_tensor = cls_tensor.to(device)
-
-        # Auto-detect if classification model is 3D
-        is_cls_3d = any(isinstance(m, (nn.Conv3d, nn.ConvTranspose3d)) for m in cls_model.modules())
-        if is_cls_3d:
-            # Replicate 2D slice 16 times along depth axis for 3D classifier input
-            cls_tensor = cls_tensor.unsqueeze(2).repeat(1, 1, 16, 1, 1)
-
-        # Run classification
-        with torch.no_grad():
-            cls_output = cls_model(cls_tensor)
-
-        # Extract classification outputs (handles dict & list output cases from MedFormer)
-        if isinstance(cls_output, dict):
-            cls_output = cls_output.get("classification", None)
-        if isinstance(cls_output, (list, tuple)):
-            cls_output = cls_output[0]
-
-        # Check if classification branch is active/valid
-        if cls_output is None:
-            # Dynamic fallback probability calculation based on the actual predicted tumor mask activation
+        # --- Classification using Keras model ---
+        if _keras_cls_model is not None:
+            # Prepare input for Keras classifier (299x299x3 RGB)
+            cls_input = cv2.resize(preprocessed, (config.KERAS_CLASSIFIER_INPUT_SIZE,
+                                                   config.KERAS_CLASSIFIER_INPUT_SIZE))
+            # Convert grayscale to 3-channel RGB
+            if len(cls_input.shape) == 2:
+                cls_input_rgb = np.stack([cls_input] * 3, axis=-1)
+            else:
+                cls_input_rgb = cls_input
+            
+            # Add batch dimension: (1, 299, 299, 3)
+            cls_batch = np.expand_dims(cls_input_rgb, axis=0).astype(np.float32)
+            
+            # Run Keras prediction
+            cls_output_np = _keras_cls_model.predict(cls_batch, verbose=0)
+            cls_probs_np = cls_output_np[0]  # Shape: (2,) — [normal_prob, cancer_prob]
+            
+            predicted_class = int(np.argmax(cls_probs_np))
+            labels = ["Normal", "Pancreatic Cancer"]
+            cls_results = {
+                "prediction": labels[predicted_class],
+                "prediction_label": "Cancer" if predicted_class == 1 else "Normal",
+                "cancer_probability": float(cls_probs_np[1]),
+                "normal_probability": float(cls_probs_np[0]),
+                "confidence": float(cls_probs_np.max()),
+            }
+        else:
+            # Fallback: derive classification from segmentation tumor activation
             tumor_max = float(tumor_prob.max())
             tumor_mean = float(tumor_prob.mean())
             
             if tumor_max > config.SEGMENTATION_THRESHOLD:
-                # Malignant: scale cancer probability dynamically between 72% and 98% based on mean intensity
                 prob_cancer = 0.72 + 0.26 * min(tumor_mean * 20.0, 1.0)
             else:
-                # Normal: scale cancer probability dynamically between 2% and 28%
                 prob_cancer = 0.02 + 0.26 * min(tumor_mean * 20.0, 1.0)
                 
-            cls_probs = np.array([1.0 - prob_cancer, prob_cancer], dtype=np.float32)
-        else:
-            # Extract center slice logits if output has depth dimension
-            if is_cls_3d and len(cls_output.shape) == 3:
-                cls_output = cls_output.squeeze(2)
-            cls_probs = F.softmax(cls_output, dim=1).squeeze().cpu().numpy()
-
-        # Parse classification results
-        predicted_class = int(cls_probs.argmax())
-        labels = ["Normal", "Pancreatic Cancer"]
-        cls_results = {
-            "prediction": labels[predicted_class],
-            "prediction_label": "Cancer" if predicted_class == 1 else "Normal",
-            "cancer_probability": float(cls_probs[1]),
-            "normal_probability": float(cls_probs[0]),
-            "confidence": float(cls_probs.max()),
-        }
+            cls_probs_np = np.array([1.0 - prob_cancer, prob_cancer], dtype=np.float32)
+            predicted_class = int(cls_probs_np.argmax())
+            labels = ["Normal", "Pancreatic Cancer"]
+            cls_results = {
+                "prediction": labels[predicted_class],
+                "prediction_label": "Cancer" if predicted_class == 1 else "Normal",
+                "cancer_probability": float(cls_probs_np[1]),
+                "normal_probability": float(cls_probs_np[0]),
+                "confidence": float(cls_probs_np.max()),
+            }
 
         # Post-process segmentation
         seg_results = process_segmentation_results(
@@ -652,35 +670,37 @@ def run_full_inference(filepath, file_id):
         prediction = "No convincing evidence of pancreatic tumor."
         risk = "Low"
         confidence_val = raw_confidence
-    is_small_tumor = (
-        tumor_area_cm2 < config.MIN_TUMOR_AREA_CM2 and
-        raw_tumor_area < config.MIN_TUMOR_PIXELS
-    )
-
-    if is_small_tumor and cancer_probability >= config.CONFIDENCE_OVERRIDE_THRESHOLD and has_high_confidence:
-        prediction_label = "Cancer"
-        prediction = "Suspicious small lesion with strong classifier evidence"
-        from utils.segmentation import assess_risk_level
-        risk = assess_risk_level(cancer_probability, tumor_area_cm2)
-        confidence_val = raw_confidence
-    elif is_small_tumor:
-        # Force Normal if the lesion is too small to be clinically reliable
-        prediction_label = "Normal"
-        prediction = "No Tumor Detected"
-        risk = "Low"
-        confidence_val = max(raw_confidence, 1.0 - cancer_probability)
-    elif not has_high_confidence:
-        prediction_label = "Normal"
-        prediction = "Uncertain: Low prediction confidence (< 70%)."
-        risk = "Moderate"
-        confidence_val = raw_confidence
     else:
-        # All safety checks passed and tumor is present and large enough
-        prediction_label = "Cancer"
-        prediction = "Tumor Detected"
-        from utils.segmentation import assess_risk_level
-        risk = assess_risk_level(cancer_probability, tumor_area_cm2)
-        confidence_val = raw_confidence
+        # Pancreas detected and segmentation is valid — apply tumor-based diagnosis
+        is_small_tumor = (
+            tumor_area_cm2 < config.MIN_TUMOR_AREA_CM2 and
+            raw_tumor_area < config.MIN_TUMOR_PIXELS
+        )
+
+        if is_small_tumor and cancer_probability >= config.CONFIDENCE_OVERRIDE_THRESHOLD and has_high_confidence:
+            prediction_label = "Cancer"
+            prediction = "Suspicious small lesion with strong classifier evidence"
+            from utils.segmentation import assess_risk_level
+            risk = assess_risk_level(cancer_probability, tumor_area_cm2)
+            confidence_val = raw_confidence
+        elif is_small_tumor:
+            # Force Normal if the lesion is too small to be clinically reliable
+            prediction_label = "Normal"
+            prediction = "No Tumor Detected"
+            risk = "Low"
+            confidence_val = max(raw_confidence, 1.0 - cancer_probability)
+        elif not has_high_confidence:
+            prediction_label = "Normal"
+            prediction = "Uncertain: Low prediction confidence (< 70%)."
+            risk = "Moderate"
+            confidence_val = raw_confidence
+        else:
+            # All safety checks passed and tumor is present and large enough
+            prediction_label = "Cancer"
+            prediction = "Tumor Detected"
+            from utils.segmentation import assess_risk_level
+            risk = assess_risk_level(cancer_probability, tumor_area_cm2)
+            confidence_val = raw_confidence
 
     # If the prediction is anything but "Tumor Detected", make sure tumor mask and boundary are empty for safety
     if prediction_label != "Cancer":
