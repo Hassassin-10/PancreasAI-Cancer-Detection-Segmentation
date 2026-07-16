@@ -64,17 +64,22 @@ def keep_largest_connected_component(mask):
 
 def postprocess_pancreas_mask(mask):
     """
-    Apply Largest Connected Component, remove tiny blobs, fill holes, and close gaps.
+    Remove tiny noise blobs, fill holes, and close gaps.
     """
     if (mask > 0).sum() == 0:
         return mask
         
-    # Connected component filtering: keep only the largest one (pancreas must be one connected organ)
-    lcc = keep_largest_connected_component(mask)
+    # Connected component filtering: keep all significant components (>= 100 pixels)
+    # since pancreas can appear as disconnected regions on a 2D slice
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask.astype(np.uint8))
+    result = np.zeros_like(mask)
+    for i in range(1, num_labels):
+        if stats[i, cv2.CC_STAT_AREA] >= 100:
+            result[labels == i] = 255
     
     # Binary closing to smooth boundaries
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    closed = cv2.morphologyEx(lcc, cv2.MORPH_CLOSE, kernel)
+    closed = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel)
     
     # Fill internal holes (draw all contours filled)
     contours, _ = cv2.findContours(closed, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
@@ -87,17 +92,28 @@ def postprocess_pancreas_mask(mask):
 
 def postprocess_tumor_mask(tumor_mask, pancreas_mask):
     """
-    Ensure tumor mask only exists inside the pancreas parenchyma mask.
-    Remove tiny noise blobs (< 100 pixels).
+    Filter tumor components based on anatomical overlap/proximity with the pancreas.
     """
-    # Force tumor to be strictly inside pancreas
-    clamped_tumor = cv2.bitwise_and(tumor_mask, pancreas_mask)
+    if (tumor_mask > 0).sum() == 0:
+        return tumor_mask
+        
+    # Find connected components in the raw tumor mask
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(tumor_mask.astype(np.uint8))
+    result = np.zeros_like(tumor_mask)
     
-    # Remove tiny blobs
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(clamped_tumor)
-    result = np.zeros_like(clamped_tumor)
+    # Dilate pancreas slightly (e.g. 11x11 kernel) to tolerate minor alignment mismatch
+    kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    tolerant_pancreas = cv2.dilate(pancreas_mask, kernel_dilate)
+    
     for i in range(1, num_labels):
-        if stats[i, cv2.CC_STAT_AREA] >= 100:  # Minimum 100 pixels requirement
+        comp_mask = (labels == i).astype(np.uint8) * 255
+        
+        # Check if this component overlaps with the tolerant pancreas region
+        overlap = cv2.bitwise_and(comp_mask, tolerant_pancreas)
+        overlap_area = (overlap > 0).sum()
+        
+        # If the tumor component is of decent size (>= 30 pixels) and overlaps with the pancreas region, keep it
+        if stats[i, cv2.CC_STAT_AREA] >= 30 and overlap_area > 0:
             result[labels == i] = 255
             
     # Binary closing

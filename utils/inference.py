@@ -561,55 +561,65 @@ def run_full_inference(filepath, file_id):
 
         # --- Classification using Keras model ---
         if _keras_cls_model is not None:
+            # IMPORTANT: Use the ORIGINAL COLOR image for Keras classification,
+            # NOT the preprocessed grayscale. The Keras model was trained on raw
+            # color CT images with only rescale=1/255 (or Xception preprocess_input).
+            # Feeding it CLAHE+bilateral-filtered grayscale destroys the features
+            # the model learned during training.
+            
+            # Convert original_resized from BGR to RGB
+            original_rgb = cv2.cvtColor(original_resized, cv2.COLOR_BGR2RGB)
+            
             # Binarize and postprocess pancreas mask to crop the input
             from utils.segmentation import create_segmentation_mask, postprocess_pancreas_mask
             pancreas_raw = create_segmentation_mask(pancreas_prob)
             pancreas_binary = postprocess_pancreas_mask(pancreas_raw)
             
-            # Crop to pancreas bounding box if detected
+            # --- Prediction 1: Full (uncropped) image ---
+            full_resized = cv2.resize(original_rgb, (config.KERAS_CLASSIFIER_INPUT_SIZE,
+                                                      config.KERAS_CLASSIFIER_INPUT_SIZE))
+            full_norm = (full_resized.astype(np.float32) / 127.5) - 1.0
+            full_batch = np.expand_dims(full_norm, axis=0)
+            full_probs = _keras_cls_model.predict(full_batch, verbose=0)[0]
+            
+            # --- Prediction 2: Pancreas-cropped image ---
             pts = np.argwhere(pancreas_binary > 0)
             if len(pts) > 0:
                 ymin, xmin = pts.min(axis=0)
                 ymax, xmax = pts.max(axis=0)
-                # Pad bounding box slightly for context
                 h, w = pancreas_binary.shape
-                ymin = max(0, ymin - 15)
-                ymax = min(h, ymax + 15)
-                xmin = max(0, xmin - 15)
-                xmax = min(w, xmax + 15)
+                pad = 15
+                ymin = max(0, ymin - pad)
+                ymax = min(h, ymax + pad)
+                xmin = max(0, xmin - pad)
+                xmax = min(w, xmax + pad)
                 
-                crop_gray = preprocessed[ymin:ymax, xmin:xmax]
+                crop_color = original_rgb[ymin:ymax, xmin:xmax]
             else:
-                crop_gray = preprocessed
+                crop_color = original_rgb
                 
-            # Resize and convert to 3-channel RGB
-            cls_input = cv2.resize(crop_gray, (config.KERAS_CLASSIFIER_INPUT_SIZE,
-                                               config.KERAS_CLASSIFIER_INPUT_SIZE))
-            if len(cls_input.shape) == 2:
-                cls_input_rgb = np.stack([cls_input] * 3, axis=-1)
-            else:
-                cls_input_rgb = cls_input
-                
-            # Normalize to [-1.0, 1.0] (expected by Xception)
-            cls_input_norm = (cls_input_rgb * 2.0) - 1.0
+            crop_resized = cv2.resize(crop_color, (config.KERAS_CLASSIFIER_INPUT_SIZE,
+                                                    config.KERAS_CLASSIFIER_INPUT_SIZE))
+            crop_norm = (crop_resized.astype(np.float32) / 127.5) - 1.0
+            crop_batch = np.expand_dims(crop_norm, axis=0)
+            crop_probs = _keras_cls_model.predict(crop_batch, verbose=0)[0]
             
-            # Add batch dimension
-            cls_batch = np.expand_dims(cls_input_norm, axis=0).astype(np.float32)
+            # --- Ensemble: take the MAX cancer probability from both views ---
+            # This ensures we catch tumors whether they're more visible in the
+            # full context or in the zoomed-in pancreas region.
+            cancer_full = float(full_probs[1])
+            cancer_crop = float(crop_probs[1])
+            cancer_prob = max(cancer_full, cancer_crop)
+            normal_prob = 1.0 - cancer_prob
             
-            # Run Keras prediction
-            cls_output_np = _keras_cls_model.predict(cls_batch, verbose=0)
-            cls_probs_np = cls_output_np[0]  # Shape: (2,) — [normal_prob, cancer_prob]
-            
-            # Map prediction using the confidence threshold
-            cancer_prob = float(cls_probs_np[1])
             is_cancer = cancer_prob >= config.CONFIDENCE_THRESHOLD
             
             cls_results = {
                 "prediction": "Pancreatic Cancer" if is_cancer else "Normal",
                 "prediction_label": "Cancer" if is_cancer else "Normal",
                 "cancer_probability": cancer_prob,
-                "normal_probability": float(cls_probs_np[0]),
-                "confidence": cancer_prob if is_cancer else float(cls_probs_np[0]),
+                "normal_probability": normal_prob,
+                "confidence": cancer_prob if is_cancer else normal_prob,
             }
         else:
             # Fallback: derive classification from segmentation tumor activation
@@ -705,30 +715,24 @@ def run_full_inference(filepath, file_id):
             raw_tumor_area < config.MIN_TUMOR_PIXELS
         )
 
-        if is_small_tumor and cancer_probability >= config.CONFIDENCE_OVERRIDE_THRESHOLD and has_high_confidence:
-            prediction_label = "Cancer"
-            prediction = "Suspicious small lesion with strong classifier evidence"
+        is_classifier_cancer = cancer_probability >= config.CONFIDENCE_THRESHOLD
+
+        if is_classifier_cancer:
+            if is_small_tumor:
+                prediction_label = "Cancer"
+                prediction = "Suspicious small lesion with strong classifier evidence"
+            else:
+                prediction_label = "Cancer"
+                prediction = "Tumor Detected"
             from utils.segmentation import assess_risk_level
             risk = assess_risk_level(cancer_probability, tumor_area_cm2)
             confidence_val = raw_confidence
-        elif is_small_tumor:
-            # Force Normal if the lesion is too small to be clinically reliable
+        else:
+            # Classifier is confident it is Normal
             prediction_label = "Normal"
             prediction = "No Tumor Detected"
             risk = "Low"
-            confidence_val = max(raw_confidence, 1.0 - cancer_probability)
-        elif not has_high_confidence:
-            prediction_label = "Normal"
-            prediction = "Uncertain: Low prediction confidence (< 70%)."
-            risk = "Moderate"
-            confidence_val = raw_confidence
-        else:
-            # All safety checks passed and tumor is present and large enough
-            prediction_label = "Cancer"
-            prediction = "Tumor Detected"
-            from utils.segmentation import assess_risk_level
-            risk = assess_risk_level(cancer_probability, tumor_area_cm2)
-            confidence_val = raw_confidence
+            confidence_val = 1.0 - cancer_probability
 
     # If the prediction is anything but "Tumor Detected", make sure tumor mask and boundary are empty for safety
     if prediction_label != "Cancer":
